@@ -1,132 +1,141 @@
 // musicOne.cpp
-// Music Listening Report Generator
-// Demonstrates: OOP, input validation, file I/O, string formatting, RAII, modern C++
+// Music Listening Report with Menu, Validation, and File Output
+// Uses only Chapters 1–4: iostream, string, iomanip, ofstream, switch, if/else, basic math
 
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <fstream>
-#include <limits>
-#include <cctype>
-
-class MusicReport {
-private:
-    std::string genre;
-    std::string artist;
-    double hoursPerWeek;
-    static constexpr int WEEKS_PER_YEAR = 52;
-
-    // Clear invalid input
-    static void clearInput() {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }
-
-    // Trim whitespace
-    static std::string trim(const std::string& str) {
-        size_t first = str.find_first_not_of(" \t\r\n");
-        if (first == std::string::npos) return "";
-        size_t last = str.find_last_not_of(" \t\r\n");
-        return str.substr(first, last - first + 1);
-    }
-
-    // Title case: "indie rock" → "Indie Rock"
-    static std::string toTitleCase(std::string s) {
-        bool newWord = true;
-        for (char& c : s) {
-            if (std::isalpha(c)) {
-                c = newWord ? std::toupper(c) : std::tolower(c);
-                newWord = false;
-            } else if (std::isspace(c)) {
-                newWord = true;
-            }
-        }
-        return s;
-    }
-
-    // Get non-empty string with default
-    std::string getString(const std::string& prompt, const std::string& defaultVal) {
-        std::string input;
-        std::cout << prompt;
-        std::getline(std::cin >> std::ws, input);
-        input = trim(input);
-        if (input.empty()) {
-            std::cout << "No input. Using '" << defaultVal << "'.\n";
-            return defaultVal;
-        }
-        return toTitleCase(input);
-    }
-
-    // Get valid hours (0–168)
-    double getHours() {
-        double h;
-        do {
-            std::cout << "How many hours do you listen to music each week? (e.g., 5.5): ";
-            std::cin >> h;
-            if (std::cin.fail() || h < 0 || h > 168) {
-                std::cout << "Invalid. Enter 0–168.\n";
-                clearInput();
-            } else {
-                clearInput();
-                return h;
-            }
-        } while (true);
-    }
-
-    // Print report to any stream
-    static void print(std::ostream& os, const std::string& g, const std::string& a, double w, double y) {
-        os << "=====================================\n";
-        os << " Music Listening Summary \n";
-        os << "=====================================\n";
-        os << std::left << std::setw(20) << "Favorite Genre:" << g << "\n";
-        os << std::left << std::setw(20) << "Favorite Artist:" << a << "\n";
-        os << std::left << std::setw(20) << "Hours per Week:" << std::fixed << std::setprecision(1) << w << "\n";
-        os << std::left << std::setw(20) << "Hours per Year:" << std::fixed << std::setprecision(1) << y << "\n";
-        os << "=====================================\n";
-    }
-
-public:
-    void run() {
-        // Banner
-        std::cout << "********************************************\n";
-        std::cout << "* Welcome to the Music Listening Report! *\n";
-        std::cout << "* Let's analyze your music listening habits! *\n";
-        std::cout << "********************************************\n\n";
-
-        // Input
-        genre = getString("What's your favorite music genre? (e.g., Rock, Pop, Jazz): ", "Unknown Genre");
-        artist = getString("Who's your favorite band or artist? ", "Unknown Artist");
-        hoursPerWeek = getHours();
-        double hoursPerYear = hoursPerWeek * WEEKS_PER_YEAR;
-
-        // Console
-        std::cout << "\n";
-        print(std::cout, genre, artist, hoursPerWeek, hoursPerYear);
-
-        // File
-        {
-            std::ofstream file("report.txt");
-            if (file.is_open()) {
-                print(file, genre, artist, hoursPerWeek, hoursPerYear);
-                std::cout << "Report saved to 'report.txt'\n";
-            } else {
-                std::cout << "Error: Could not save file.\n";
-            }
-        }
-    }
-};
+using namespace std;
 
 int main() {
-    try {
-        MusicReport report;
-        report.run();
-    }
-    catch (...) {
-        std::cerr << "Unexpected error.\n";
-        return 1;
+    // === Variables ===
+    string favoriteGenre;        // User's favorite music genre
+    string favoriteArtist;       // User's favorite band or artist
+    double hoursPerWeek;         // Hours listened per week
+    double hoursPerYear;         // Calculated: hoursPerWeek * 52
+    char menuChoice;             // User's menu selection: '1', '2', or '3'
+    string skillLevel;           // Recommendation based on hours and genre/artist input
+
+    // === Friendly Introduction Banner ===
+    cout << "***************************************************" << endl;
+    cout << "*     Welcome to Your Music Listening Report!     *" << endl;
+    cout << "*   Discover your weekly and yearly music habits  *" << endl;
+    cout << "***************************************************" << endl;
+    cout << endl;
+
+    // === MENU: Selection with switch ===
+    cout << "Please choose an option:" << endl;
+    cout << "  1 = Enter new listening session" << endl;
+    cout << "  2 = View weekly report" << endl;
+    cout << "  3 = Get skill level recommendation" << endl;
+    cout << "Enter your choice (1, 2, or 3): ";
+    cin >> menuChoice;
+    cin.ignore(); // Clear newline from input buffer
+
+    // Switch to handle menu
+    switch (menuChoice) {
+        case '1':
+            cout << "\n--- Entering New Listening Session ---\n";
+
+            // Input 1: Favorite genre (string with spaces)
+            cout << "What's your favorite music genre? (e.g., Rock, Pop, Jazz): ";
+            getline(cin, favoriteGenre);
+
+            // Validate: if empty, use default
+            if (favoriteGenre.empty()) {
+                favoriteGenre = "Unknown Genre";
+                cout << "No genre entered. Using 'Unknown Genre'.\n";
+            }
+
+            // Input 2: Favorite artist (string with spaces)
+            cout << "Who's your favorite band or artist? ";
+            getline(cin, favoriteArtist);
+
+            // Validate: if empty, use default
+            if (favoriteArtist.empty()) {
+                favoriteArtist = "Unknown Artist";
+                cout << "No artist entered. Using 'Unknown Artist'.\n";
+            }
+
+            // Input 3: Hours per week (double)
+            cout << "How many hours do you listen to music each week? (e.g., 5.5): ";
+            cin >> hoursPerWeek;
+
+            // Validate input: check for failure or negative
+            if (cin.fail() || hoursPerWeek < 0) {
+                hoursPerWeek = 0.0;
+                cout << "Invalid input. Setting hours to 0.0.\n";
+                cin.clear();                    // Clear error flag
+                cin.ignore(10000, '\n');        // Discard bad input
+            }
+
+            // Derived value: total hours per year
+            hoursPerYear = hoursPerWeek * 52;
+
+            // === Compound Boolean Conditions (if/else) ===
+            // Condition 1: High listener with known favorites
+            if (hoursPerWeek >= 10 && !favoriteGenre.empty() && !favoriteArtist.empty()) {
+                skillLevel = "Dedicated Fan";
+            }
+            // Condition 2: Casual but consistent
+            else if (hoursPerWeek >= 3 && hoursPerWeek < 10) {
+                skillLevel = "Casual Listener";
+            }
+            // Default
+            else {
+                skillLevel = "Just Starting Out";
+            }
+
+            // === Formatted Output Table (Console) ===
+            cout << endl;
+            cout << "=====================================" << endl;
+            cout << "   Music Listening Summary   " << endl;
+            cout << "=====================================" << endl;
+            cout << left << setw(20) << "Genre:"       << favoriteGenre << endl;
+            cout << left << setw(20) << "Artist:"      << favoriteArtist << endl;
+            cout << left << setw(20) << "Hours/Week:"  << fixed << setprecision(1) << hoursPerWeek << endl;
+            cout << left << setw(20) << "Hours/Year:"  << fixed << setprecision(1) << hoursPerYear << endl;
+            cout << left << setw(20) << "Skill Level:" << skillLevel << endl;
+            cout << "=====================================" << endl;
+
+            // === Save to File: report.txt ===
+            ofstream outFile("report.txt");
+            if (outFile.is_open()) {
+                outFile << "=====================================\n";
+                outFile << "   Music Listening Summary   \n";
+                outFile << "=====================================\n";
+                outFile << left << setw(20) << "Genre:"       << favoriteGenre << "\n";
+                outFile << left << setw(20) << "Artist:"      << favoriteArtist << "\n";
+                outFile << left << setw(20) << "Hours/Week:"  << fixed << setprecision(1) << hoursPerWeek << "\n";
+                outFile << left << setw(20) << "Hours/Year:"  << fixed << setprecision(1) << hoursPerYear << "\n";
+                outFile << left << setw(20) << "Skill Level:" << skillLevel << "\n";
+                outFile << "=====================================\n";
+                outFile.close();
+                cout << "Report successfully saved to 'report.txt'\n";
+            }
+            else {
+                cout << "Error: Could not save to 'report.txt'\n";
+            }
+            break;
+
+        case '2':
+            cout << "\n--- Weekly Report View ---\n";
+            cout << "Please run option 1 first to enter your data.\n";
+            break;
+
+        case '3':
+            cout << "\n--- Skill Level Recommendation ---\n";
+            cout << "Enter your data in option 1 to get a personalized recommendation!\n";
+            break;
+
+        default:
+            cout << "\nInvalid choice. Please select 1, 2, or 3.\n";
+            break;
     }
 
-    std::cout << "\nPress Enter to exit...";
-    std::cin.get();
+    cout << "\nThank you for using the Music Listening Report!\n";
+    cout << "Press Enter to exit...";
+    cin.get();
     return 0;
 }
