@@ -1,5 +1,5 @@
 # musicOne
-Overview
+Overview: 
 This C++ console application, developed as part of an introductory programming assignment, tracks and analyzes users' music listening habits. It prompts for input on favorite genre, artist, weekly listening hours, and number of playlists; validates the data; computes derived metrics like annual listening time; and generates a formatted summary report displayed on-screen and saved to report.txt. The program uses a menu-driven interface with switch statements, if-else logic for recommendations, and loops (while, do-while, for) for repetition and control flow, adhering to concepts from Chapters 1-5 of the course textbook.
 Features
 
