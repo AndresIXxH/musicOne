@@ -17,14 +17,14 @@ File I/O: Appends reports to report.txt; option to view via ifstream and while(g
 Loops: Main while for menu, do-while for multi-session entry, for loop for fixed-tip generation.
 Error Handling: Graceful fallbacks for empty/invalid inputs; file open checks.
 
-Requirements
+Requirements 
 
 C++ compiler (e.g., g++ or Visual Studio).
-Standard libraries: <iostream>, <iomanip>, <string>, <fstream>.
+Standard libraries: <iostream>, <iomanip>, <string>, <fstream>. 
 
-Building and Running
+Building and Running 
 
-Save the code as musicOne.cpp.
-Compile: g++ -o musicOne musicOne.cpp (or build in Visual Studio).
-Run: ./musicOne (Linux/Mac) or musicOne.exe (Windows).
-Interact via the menu; sample inputs: Genre="Rock", Artist="The Beatles", Hours=7.5, Playlists=4. 
+Save the code as musicOne.cpp. 
+Compile: g++ -o musicOne musicOne.cpp (or build in Visual Studio). 
+Run: ./musicOne (Linux/Mac) or musicOne.exe (Windows). 
+Interact via the menu; sample inputs: Genre="Rock", Artist="The Beatles", Hours=7.5, Playlists=4.  
