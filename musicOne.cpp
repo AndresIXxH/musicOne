@@ -8,6 +8,17 @@ using namespace std;
 
 enum SkillLevel { BEGINNER, CASUAL, DEDICATED, PRO };
 
+struct MusicSession {
+    string genre;
+    string artist;
+    double hoursPerWeek;
+    double hoursPerYear;
+    int numPlaylists;
+    int playlistSongs[5];
+    SkillLevel level;
+    string recommendation;
+};
+
 // Function prototypes
 void displayBanner();
 void setConsoleColor(WORD color);
@@ -17,24 +28,18 @@ double collectDoubleInput(const string& prompt);
 int collectIntInput(const string& prompt);
 string convertSkillToString(SkillLevel sl);
 double calculateAverageSongs(const int songs[], int num);
-void performCalculations(double hoursPerWeek, int numPlaylists, const int playlistSongs[], double& hoursPerYear,
-    SkillLevel& skillLevel, string& recommendation);
-void displaySummary(const string& favoriteGenre, const string& favoriteArtist,
-    double hoursPerWeek, double hoursPerYear, int numPlaylists,
-    const SkillLevel& skillLevel, const string& recommendation, const int playlistSongs[]);
-void saveReportToFile(const string& favoriteGenre, const string& favoriteArtist,
-    double hoursPerWeek, double hoursPerYear, int numPlaylists,
-    const SkillLevel& skillLevel, const string& recommendation, const int playlistSongs[]);
+void fillSession(MusicSession& session);
+void calculateSession(MusicSession& session);
+void displaySummary(const MusicSession& session);
+void saveReportToFile(const MusicSession& session);
 void displayQuickTips(const string& favoriteArtist, double hoursPerWeek, SkillLevel skillLevel);
-void viewReportFromFile();
+void displayOverallSummary(const MusicSession sessions[], int numSessions);
+const int MAX_PLAYLISTS = 5;
+const int MAX_SESSIONS = 10;
 
 int main() {
-    string favoriteGenre = "Unknown", favoriteArtist = "Unknown";
-    string recommendation;
-    double hoursPerWeek = 0.0, hoursPerYear = 0.0;
-    int numPlaylists = 0;
-    const int MAX_PLAYLISTS = 5;
-    int playlistSongs[MAX_PLAYLISTS] = {0};  // Initialize to 0
+    MusicSession allSessions[MAX_SESSIONS];
+    int numSessions = 0;
     char menuChoice = ' ', continueEntry = ' ';
     bool keepRunning = true;
     bool firstRun = true;
@@ -51,29 +56,16 @@ int main() {
         case '1': {
             cout << "\n--- Entering New Listening Session ---\n";
             do {
-                favoriteGenre = collectStringInput("What's your favorite music genre? (e.g., Rock, Pop, Jazz): ");
-                favoriteArtist = collectStringInput("Who's your favorite band or artist? ");
-                hoursPerWeek = collectDoubleInput("How many hours do you listen to music each week? (e.g., 5.5): ");
-                numPlaylists = collectIntInput("How many playlists do you have for this genre? ");
-                if (numPlaylists > MAX_PLAYLISTS) {
-                    cout << "Maximum " << MAX_PLAYLISTS << " playlists supported.\n";
-                    numPlaylists = MAX_PLAYLISTS;
+                if (numSessions >= MAX_SESSIONS) {
+                    cout << "Maximum " << MAX_SESSIONS << " sessions supported. Cannot add more.\n";
+                    break;
                 }
-                for (int i = 0; i < numPlaylists; ++i) {
-                    string prompt = "How many songs in playlist " + to_string(i + 1) + "? (e.g., 20): ";
-                    playlistSongs[i] = collectIntInput(prompt);
-                    if (playlistSongs[i] == 0) {
-                        cout << "Assuming 10 songs for empty playlist.\n";
-                        playlistSongs[i] = 10;
-                    }
-                }
-                SkillLevel sl = BEGINNER;  // Default
-                performCalculations(hoursPerWeek, numPlaylists, playlistSongs, hoursPerYear, sl, recommendation);
-                displaySummary(favoriteGenre, favoriteArtist, hoursPerWeek, hoursPerYear,
-                    numPlaylists, sl, recommendation, playlistSongs);
-                displayQuickTips(favoriteArtist, hoursPerWeek, sl);
-                saveReportToFile(favoriteGenre, favoriteArtist, hoursPerWeek, hoursPerYear,
-                    numPlaylists, sl, recommendation, playlistSongs);
+                fillSession(allSessions[numSessions]);
+                calculateSession(allSessions[numSessions]);
+                displaySummary(allSessions[numSessions]);
+                displayQuickTips(allSessions[numSessions].artist, allSessions[numSessions].hoursPerWeek, allSessions[numSessions].level);
+                saveReportToFile(allSessions[numSessions]);
+                numSessions++;
                 cout << "\nEnter another session? (y/n): ";
                 cin >> continueEntry;
                 cin.ignore();
@@ -81,31 +73,28 @@ int main() {
             break;
         }
         case '2':
-            viewReportFromFile();
+            displayOverallSummary(allSessions, numSessions);
             break;
-        case '3':
+        case '3': {
             cout << "\n--- Skill Level Recommendation ---\n";
-            if (hoursPerWeek == 0.0) {
+            if (numSessions == 0) {
                 cout << "Enter data in option 1 first!\n";
             }
             else {
-                cout << "Based on " << fixed << setprecision(1) << hoursPerWeek
-                    << " hours/week and " << numPlaylists << " playlists:\n";
-                SkillLevel sl;
-                // Recompute skill level for last session (simplified)
-                if (hoursPerWeek >= 15) sl = PRO;
-                else if (hoursPerWeek >= 10) sl = DEDICATED;
-                else if (hoursPerWeek >= 3) sl = CASUAL;
-                else sl = BEGINNER;
+                const MusicSession& lastSession = allSessions[numSessions - 1];
+                cout << "Based on " << fixed << setprecision(1) << lastSession.hoursPerWeek
+                    << " hours/week and " << lastSession.numPlaylists << " playlists:\n";
+                SkillLevel sl = lastSession.level;
                 string levelStr = convertSkillToString(sl);
                 if (sl >= DEDICATED)
                     cout << "Advanced Level: You're a music curator! Try producing a mix.\n";
                 else
                     cout << "Grower Level: " << levelStr
-                        << ". Aim for " << fixed << setprecision(1) << (10.0 - hoursPerWeek)
+                        << ". Aim for " << fixed << setprecision(1) << (10.0 - lastSession.hoursPerWeek)
                         << " more hours/week to reach Dedicated Fan.\n";
             }
             break;
+        }
         case '4':
             keepRunning = false;
             break;
@@ -127,21 +116,18 @@ void displayBanner() {
     cout << "* Discover your weekly and yearly music habits *\n";
     cout << "***************************************************\n\n";
 }
-
 void setConsoleColor(WORD color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, color);
 }
-
 void displayMenu() {
     cout << "Please choose an option:\n";
     cout << " 1 = Enter new listening session\n";
-    cout << " 2 = View weekly report\n";
+    cout << " 2 = View overall summary\n";
     cout << " 3 = Get skill level recommendation\n";
     cout << " 4 = Quit program\n";
     cout << "Enter your choice (1-4): ";
 }
-
 string collectStringInput(const string& prompt) {
     string s;
     cout << prompt;
@@ -152,7 +138,6 @@ string collectStringInput(const string& prompt) {
     }
     return s;
 }
-
 double collectDoubleInput(const string& prompt) {
     double d;
     cout << prompt;
@@ -166,7 +151,6 @@ double collectDoubleInput(const string& prompt) {
     cin.ignore();
     return d;
 }
-
 int collectIntInput(const string& prompt) {
     int i;
     cout << prompt;
@@ -180,7 +164,6 @@ int collectIntInput(const string& prompt) {
     cin.ignore();
     return i;
 }
-
 string convertSkillToString(SkillLevel sl) {
     switch (sl) {
     case BEGINNER: return "Just Starting Out";
@@ -190,7 +173,6 @@ string convertSkillToString(SkillLevel sl) {
     default: return "Unknown";
     }
 }
-
 double calculateAverageSongs(const int songs[], int num) {
     if (num == 0) return 0.0;
     double sum = 0.0;
@@ -199,61 +181,77 @@ double calculateAverageSongs(const int songs[], int num) {
     }
     return sum / num;
 }
-
-void performCalculations(double hoursPerWeek, int numPlaylists, const int playlistSongs[], double& hoursPerYear,
-    SkillLevel& skillLevel, string& recommendation) {
-    hoursPerYear = hoursPerWeek * 52;
-    double avgSongs = calculateAverageSongs(playlistSongs, numPlaylists);
-    if (hoursPerWeek >= 15) skillLevel = PRO;
-    else if (hoursPerWeek >= 10) skillLevel = DEDICATED;
-    else if (hoursPerWeek >= 3) skillLevel = CASUAL;
-    else skillLevel = BEGINNER;
-    if (hoursPerWeek >= 5 && avgSongs < 15)
-        recommendation = "Your playlists are short - add more songs!";
-    else if (avgSongs > 50)
-        recommendation = "Impressive library size! Consider sharing.";
-    else
-        recommendation = "Balanced collection - keep discovering.";
+void fillSession(MusicSession& session) {
+    session.genre = collectStringInput("What's your favorite music genre? (e.g., Rock, Pop, Jazz): ");
+    session.artist = collectStringInput("Who's your favorite band or artist? ");
+    session.hoursPerWeek = collectDoubleInput("How many hours do you listen to music each week? (e.g., 5.5): ");
+    session.numPlaylists = collectIntInput("How many playlists do you have for this genre? ");
+    if (session.numPlaylists > MAX_PLAYLISTS) {
+        cout << "Maximum " << MAX_PLAYLISTS << " playlists supported.\n";
+        session.numPlaylists = MAX_PLAYLISTS;
+    }
+    for (int j = 0; j < MAX_PLAYLISTS; ++j) {
+        session.playlistSongs[j] = 0;
+    }
+    for (int i = 0; i < session.numPlaylists; ++i) {
+        string prompt = "How many songs in playlist " + to_string(i + 1) + "? (e.g., 20): ";
+        session.playlistSongs[i] = collectIntInput(prompt);
+        if (session.playlistSongs[i] == 0) {
+            cout << "Assuming 10 songs for empty playlist.\n";
+            session.playlistSongs[i] = 10;
+        }
+    }
+    session.hoursPerYear = 0.0;
+    session.level = BEGINNER;
+    session.recommendation = "";
 }
-
-void displaySummary(const string& favoriteGenre, const string& favoriteArtist,
-    double hoursPerWeek, double hoursPerYear, int numPlaylists,
-    const SkillLevel& skillLevel, const string& recommendation, const int playlistSongs[]) {
-    double avgSongs = calculateAverageSongs(playlistSongs, numPlaylists);
+void calculateSession(MusicSession& session) {
+    session.hoursPerYear = session.hoursPerWeek * 52;
+    double avgSongs = calculateAverageSongs(session.playlistSongs, session.numPlaylists);
+    if (session.hoursPerWeek >= 15) session.level = PRO;
+    else if (session.hoursPerWeek >= 10) session.level = DEDICATED;
+    else if (session.hoursPerWeek >= 3) session.level = CASUAL;
+    else session.level = BEGINNER;
+    if (session.hoursPerWeek >= 5 && avgSongs < 15)
+        session.recommendation = "Your playlists are short - add more songs!";
+    else if (avgSongs > 50)
+        session.recommendation = "Impressive library size! Consider sharing.";
+    else
+        session.recommendation = "Balanced collection - keep discovering.";
+}
+void displaySummary(const MusicSession& session) {
+    double avgSongs = calculateAverageSongs(session.playlistSongs, session.numPlaylists);
     cout << "\n=====================================\n";
     cout << " Music Listening Summary\n";
     cout << "=====================================\n";
-    cout << left << setw(20) << "Genre:" << favoriteGenre << endl;
-    cout << left << setw(20) << "Artist:" << favoriteArtist << endl;
-    cout << left << setw(20) << "Hours/Week:" << fixed << setprecision(1) << hoursPerWeek << endl;
-    cout << left << setw(20) << "Hours/Year:" << fixed << setprecision(1) << hoursPerYear << endl;
-    cout << left << setw(20) << "Playlists:" << numPlaylists << endl;
-    cout << left << setw(20) << "Skill Level:" << convertSkillToString(skillLevel) << endl;
-    cout << left << setw(20) << "Tip:" << recommendation << endl;
+    cout << left << setw(20) << "Genre:" << session.genre << endl;
+    cout << left << setw(20) << "Artist:" << session.artist << endl;
+    cout << left << setw(20) << "Hours/Week:" << fixed << setprecision(1) << session.hoursPerWeek << endl;
+    cout << left << setw(20) << "Hours/Year:" << fixed << setprecision(1) << session.hoursPerYear << endl;
+    cout << left << setw(20) << "Playlists:" << session.numPlaylists << endl;
+    cout << left << setw(20) << "Skill Level:" << convertSkillToString(session.level) << endl;
+    cout << left << setw(20) << "Tip:" << session.recommendation << endl;
     cout << left << setw(20) << "Avg Songs/Playlist:" << fixed << setprecision(0) << avgSongs << endl;
     cout << "=====================================\n";
 }
-
-void saveReportToFile(const string& favoriteGenre, const string& favoriteArtist,
-    double hoursPerWeek, double hoursPerYear, int numPlaylists,
-    const SkillLevel& skillLevel, const string& recommendation, const int playlistSongs[]) {
+void saveReportToFile(const MusicSession& session) {
     ofstream file("report.txt", ios::app);
-    double avgSongs = calculateAverageSongs(playlistSongs, numPlaylists);
+    double avgSongs = calculateAverageSongs(session.playlistSongs, session.numPlaylists);
     if (file.is_open()) {
         file << "=====================================\n";
         file << " Music Listening Summary\n";
         file << "=====================================\n";
-        file << left << setw(20) << "Genre:" << favoriteGenre << "\n";
-        file << left << setw(20) << "Artist:" << favoriteArtist << "\n";
-        file << left << setw(20) << "Hours/Week:" << fixed << setprecision(1) << hoursPerWeek << "\n";
-        file << left << setw(20) << "Hours/Year:" << fixed << setprecision(1) << hoursPerYear << "\n";
-        file << left << setw(20) << "Playlists:" << numPlaylists << "\n";
-        file << left << setw(20) << "Skill Level:" << convertSkillToString(skillLevel) << "\n";
-        file << left << setw(20) << "Tip:" << recommendation << "\n";
+        file << left << setw(20) << "Genre:" << session.genre << "\n";
+        file << left << setw(20) << "Artist:" << session.artist << "\n";
+        file << left << setw(20) << "Hours/Week:" << fixed << setprecision(1) << session.hoursPerWeek << "\n";
+        file << left << setw(20) << "Hours/Year:" << fixed << setprecision(1) << session.hoursPerYear << "\n";
+        file << left << setw(20) << "Playlists:" << session.numPlaylists << "\n";
+        file << left << setw(20) << "Skill Level:" << convertSkillToString(session.level) << "\n";
+        file << left << setw(20) << "Tip:" << session.recommendation << "\n";
         file << left << setw(20) << "Avg Songs/Playlist:" << fixed << setprecision(0) << avgSongs << "\n";
         file << "Playlist Details:\n";
-        for (int i = 0; i < numPlaylists; ++i) {
-            file << "  Playlist " << (i + 1) << ": " << playlistSongs[i] << " songs\n";
+        for (int i = 0; i < session.numPlaylists; ++i) {
+            file << " Playlist " << (i + 1) << ": " << session.playlistSongs[i] << " songs\n";
         }
         file << "=====================================\n\n";
         file.close();
@@ -263,7 +261,6 @@ void saveReportToFile(const string& favoriteGenre, const string& favoriteArtist,
         cout << "Error saving file!\n";
     }
 }
-
 void displayQuickTips(const string& favoriteArtist, double hoursPerWeek, SkillLevel skillLevel) {
     cout << "\nQuick Tips (Top 3 for your level):\n";
     switch (skillLevel) {
@@ -289,19 +286,39 @@ void displayQuickTips(const string& favoriteArtist, double hoursPerWeek, SkillLe
         break;
     }
 }
-
-void viewReportFromFile() {
-    cout << "\n--- Weekly Report View ---\n";
-    ifstream file("report.txt");
-    if (file.is_open()) {
-        string line;
-        cout << "--- Full Report ---\n";
-        while (getline(file, line))
-            cout << line << endl;
-        file.close();
-        cout << "--- End of Report ---\n";
+void displayOverallSummary(const MusicSession sessions[], int numSessions) {
+    if (numSessions == 0) {
+        cout << "\n--- Overall Summary ---\n";
+        cout << "No sessions entered yet.\n";
+        cout << "=====================================\n";
+        return;
     }
-    else {
-        cout << "No report.txt found yet. Enter some data first!\n";
+    cout << "\n--- Overall Summary Across " << numSessions << " Sessions ---\n";
+    double totalHoursWeek = 0.0;
+    int totalPlaylists = 0;
+    double maxHours = 0.0;
+    string mostHoursArtist = "";
+    int maxNumPL = 0;
+    double totalHoursYear = 0.0;
+    for (int i = 0; i < numSessions; ++i) {
+        totalHoursWeek += sessions[i].hoursPerWeek;
+        totalPlaylists += sessions[i].numPlaylists;
+        totalHoursYear += sessions[i].hoursPerYear;
+        if (sessions[i].hoursPerWeek > maxHours) {
+            maxHours = sessions[i].hoursPerWeek;
+            mostHoursArtist = sessions[i].artist;
+        }
+        if (sessions[i].numPlaylists > maxNumPL) {
+            maxNumPL = sessions[i].numPlaylists;
+        }
     }
+    double avgHoursWeek = totalHoursWeek / numSessions;
+    double avgPL = static_cast<double>(totalPlaylists) / numSessions;
+    double avgHoursYear = totalHoursYear / numSessions;
+    cout << "Average hours per week: " << fixed << setprecision(1) << avgHoursWeek << " hours\n";
+    cout << "Average number of playlists per session: " << fixed << setprecision(1) << avgPL << "\n";
+    cout << "Artist with most listening time: " << mostHoursArtist << " (" << fixed << setprecision(1) << maxHours << " hrs/week)\n";
+    cout << "Maximum playlists in any session: " << maxNumPL << "\n";
+    cout << "Average hours per year: " << fixed << setprecision(1) << avgHoursYear << " hours\n";
+    cout << "=====================================\n";
 }
