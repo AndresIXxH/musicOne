@@ -1,4 +1,4 @@
-// musicOne(6.0).cpp
+// musicOne(7.0).cpp
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -322,3 +322,4 @@ void displayOverallSummary(const MusicSession sessions[], int numSessions) {
     cout << "Average hours per year: " << fixed << setprecision(1) << avgHoursYear << " hours\n";
     cout << "=====================================\n";
 }
+
